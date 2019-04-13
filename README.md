@@ -8,7 +8,7 @@ Contoh:
     3! = 6
     4! = 24
     5! = 120
-## Ans
+### Jawaban
 1. Input diambil dalam parameter 
     ```c 
     int main(int argc, char argv[]);
