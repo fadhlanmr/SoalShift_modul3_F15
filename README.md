@@ -1,5 +1,5 @@
 # SoalShift_modul3_F15
-Agmal emang susah dibangunin, dikelas aja suka tidur. Kalo Iraj Susah ditidurin hehe
+<sub><sup> Agmal emang susah dibangunin, dikelas aja suka tidur. Kalo Iraj Susah ditidurin. </sub></sup>
 
 ## Soal No 1
 Buatlah program C yang bisa menghitung faktorial secara parallel lalu menampilkan hasilnya secara berurutan
