@@ -337,10 +337,66 @@ Dengan Syarat :
 - Wajib Menggunakan Multithreading
 - Boleh menggunakan system
 ### Jawaban
-1. Membuat 2 thread (memastikan semua proses berjalan bersamaan).
-2. Thread 1 : Membuat file > Mengkompres > Meremove > Mengekstrak.
-3. Thread 2 bekerja seperti thread 1, dengan nama yang berbeda.
-4. Semua perintah bisa dijalankan.
+1. Membuat fungsi menyimpan, zip, remove, unzip file 1 sequence
+```c
+void* simpan(void *arg)
+{
+    int num = *((int *) arg);
+    char intjadis[10];
+    sprintf(intjadis, "%d", num);
+
+    //ps -aux | awk {print} > SimpanProses$i.txt | head -10
+    char command[777];
+    strcpy(command, "ps -aux | awk {print} > SimpanProses");
+    strcat(command, intjadis); 
+    strcat(command, ".txt | head -10");
+    system(command);
+
+    //zip KompresProses$i.zip SimpanProses$i.txt
+    char commandz[777];
+    strcpy(commandz, "zip KompresProses");
+    strcat(commandz, intjadis);
+    strcat(commandz, ".zip SimpanProses");
+    strcat(commandz, intjadis);
+    strcat(commandz, ".txt");  
+    system(commandz);
+
+    //rm SimpanProses$i.txt
+    char commandr[777];
+    strcpy(commandr, "rm SimpanProses"); 
+    strcat(commandr, intjadis);
+    strcat(commandr, ".txt");
+    system(commandr);
+
+    sleep(15); //nunggu 15 detik ya
+
+    //unzip KompresProses$i.zip
+    char commandu[777];
+    strcpy(commandu, "unzip KompresProses");
+    strcat(commandu, intjadis);
+    strcat(commandu, ".zip");
+    system(commandu);
+    status = 1;
+}
+```
+2. Buat Thread untuk melakukan fungsi diatas
+```c
+err1=pthread_create(&tid1, NULL, &simpan, (void*) p);
+if(err1!=0){
+	fprintf(stderr,"Error - pthread_create() return code: %d\n", err1);
+	exit(EXIT_FAILURE);
+}
+err2=pthread_create(&tid1, NULL, &simpan, (void*) p2);
+if(err2!=0){
+	fprintf(stderr,"Error - pthread_create() return code: %d\n", err2);
+	exit(EXIT_FAILURE);
+}
+```
+3. Join Thread untuk thread 1 lalu thread 2 dijalankan
+```c
+pthread_join(tid1, NULL);
+pthread_join(tid2, NULL);
+```
 
 ## Soal 5
 Angga, adik Jiwang akan berulang tahun yang ke sembilan pada tanggal 6 April besok. Karena lupa menabung, Jiwang tidak mempunyai uang sepeserpun untuk membelikan Angga kado. Kamu sebagai sahabat Jiwang ingin membantu Jiwang membahagiakan adiknya sehingga kamu menawarkan bantuan membuatkan permainan komputer sederhana menggunakan program C. Jiwang sangat menyukai idemu tersebut. Berikut permainan yang Jiwang minta. 
@@ -410,3 +466,100 @@ Spesifikasi program:
 
 7. Pastikan terminal hanya mendisplay status detik ini sesuai scene terkait (hint: menggunakan system(“clear”))
 ### Jawaban
+1. Membuat 2 file, untuk shop dan main game.
+    - membuat shared memory untuk berbagi stok food yang dapat dibeli
+    ```c
+    key_t key = 1234;
+    int shmid = shmget(key, sizeof(int), IPC_CREAT | 0666);
+    shopFoodStock = shmat (shmid, NULL, 0);
+    
+    *shopFoodStock = 100;
+
+    shmdt(shopFoodStock);
+    shmctl(shmid, IPC_RMID, NULL);
+    ```
+    - membuat changemode untuk dapat berubah scene dan tidak merubah value
+    ```c
+    void changemode(int dir){
+        static struct termios oldt, newt;
+ 
+        if ( dir == 1 ){
+            tcgetattr( STDIN_FILENO, &oldt);
+            newt = oldt;
+            newt.c_lflag &= ~( ICANON | ECHO );
+            tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+        }
+        else{
+            tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
+        }
+    }
+    ```
+    - Membuat fungsi keyboard hit, yaitu menginput angka tanpa memencet enter
+    ```c
+    int kbhit (void){
+        struct timeval tv;
+        fd_set rdfs;
+        
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+        
+        FD_ZERO(&rdfs);
+        FD_SET (STDIN_FILENO, &rdfs);
+        
+        select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+        return FD_ISSET(STDIN_FILENO, &rdfs);
+    }
+    ```
+2. Membuat display di tiap program sesuai dengan 
+    - Shop display
+    ```c
+    printf("Shop\n");
+    printf("Food stock : %d\n",*shopFoodStock);
+    printf("Choices\n");
+    printf("1. Restock\n");
+    printf("2. Exit\n");
+      
+    system("clear");
+    ```
+    - Game display
+    ```c
+    if(scene == 1){
+        printf("StandbyMode\n");
+        printf("Health : %d\n",monsHealth);
+        printf("Hunger : %d\n",monsHunger);
+        printf("Hygiene : %d\n",monsHygiene);
+        printf("Food left : %d\n",playerFoodStock);
+        if(isBath == 0){
+            printf("Bath will be ready in %ds\n",bathCooldown);
+        }
+        else{
+            printf("Bath is ready\n");
+        }
+        printf("Choices\n");
+        printf("1. Eat\n");
+        printf("2. Bath\n");
+        printf("3. Battle\n");
+        printf("4. Shop\n");
+        printf("5. Exit\n");
+
+    }
+    else if(scene == 2){
+        printf("Battle Mode\n");
+        printf("%s's Health : %d\n",monsterName,monsHealth);
+        printf("Enemy's Health : %d\n",enemyHealth);
+        printf("Choices\n");
+        printf("1. Attack\n");
+        printf("2. Run\n");
+
+    }
+    else if(scene == 3){
+        printf("Shop Mode\n");
+        printf("Shop food stock : %d\n",*shopFoodStock);
+        printf("Your food stock : %d\n",playerFoodStock);
+        printf("Choices\n");
+        printf("1. Buy\n");
+        printf("2. Back\n");
+    }
+    system("clear");
+    ```
+3. Membuat fungsi input untuk mengubah input menjadi fungsi
